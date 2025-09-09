@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Upload, Users, Download, AlertCircle, BookOpen, Sparkles, ChevronRight } from 'lucide-react';
+import { Upload, Users, Download, AlertCircle, BookOpen, Sparkles, ChevronRight, FolderOpen } from 'lucide-react';
+import { learningPaths } from './data/courseData';
 
 const SimplifiedALPPrototype = () => {
   const [projectData, setProjectData] = useState({
@@ -14,42 +15,7 @@ const SimplifiedALPPrototype = () => {
   const [recommendations, setRecommendations] = useState(null);
   const [selectedCourses, setSelectedCourses] = useState({});
 
-  // Simplified ALP Learning Paths structure
-  const learningPaths = {
-    "Fundamentals of Cooperatives": {
-      "Understanding Cooperatives": {
-        courses: ["Introduction to Cooperatives", "Cooperative Values and Principles", "Cooperative Governance"],
-        duration: "4-5 hours",
-        level: "Basic"
-      },
-      "Leadership": {
-        courses: ["Introduction to Leadership", "Managing Meetings", "Resolving Conflicts"],
-        duration: "3-4 hours",
-        level: "Intermediate"
-      }
-    },
-    "Bookkeeping Essentials": {
-      "Bookkeeping Ledgers": {
-        courses: ["Cash Ledger", "Inventory Ledger", "Expense Ledger"],
-        duration: "4-5 hours",
-        level: "Specialized"
-      }
-    },
-    "Producer Organization Essentials": {
-      "Operations": {
-        courses: ["Introduction to Operations", "Collection from Farmers", "Receiving and Storage", "Delivery to Buyers"],
-        duration: "4-5 hours",
-        level: "Intermediate"
-      }
-    },
-    "Finance and Accounting": {
-      "Finance and Accounting Basics": {
-        courses: ["Introduction to Finance and Accounting", "Financial Statements", "Balance Sheets"],
-        duration: "6-8 hours",
-        level: "Intermediate"
-      }
-    }
-  };
+  // Learning paths are now imported from courseData.js
 
   const handleInputChange = (field, value) => {
     setProjectData(prev => ({ ...prev, [field]: value }));
@@ -75,7 +41,10 @@ const SimplifiedALPPrototype = () => {
       setSelectedCourses({
         'understanding-cooperatives': true,
         'bookkeeping-ledgers': true,
-        'operations': true
+        'operations': true,
+        'business-relationships': true,
+        'inventory-management': true,
+        'staff-management': true
       });
       setIsGenerating(false);
     }, 2000);
@@ -87,6 +56,20 @@ const SimplifiedALPPrototype = () => {
 
   const exportToPDF = () => {
     alert('PDF export functionality - would generate learning path report');
+  };
+
+  const viewMaterials = (categoryName) => {
+    // Convert category name to folder path format
+    const folderName = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const materialsPath = `./materials/${folderName}/`;
+    
+    // In a real implementation, this would open the folder or navigate to materials
+    // For prototype purposes, show what would happen
+    alert(`Opening materials folder: ${materialsPath}\n\nContents would include:\n- Course slides and presentations\n- Reading materials and handouts\n- Assessment materials\n- Video resources\n- Interactive exercises\n\nFor: ${categoryName}`);
+    
+    // In production, you might use:
+    // window.open(materialsPath, '_blank'); // For web links
+    // or navigate to a materials management system
   };
 
   return (
@@ -253,8 +236,11 @@ const SimplifiedALPPrototype = () => {
                     <h3 className="text-sm font-medium text-gray-900 mb-3">Recommendation rationale</h3>
                     <div className="space-y-2 text-sm text-gray-600">
                       <p><span className="font-medium text-gray-900">Understanding Cooperatives:</span> Essential foundation for stakeholder governance and organizational structures</p>
-                      <p><span className="font-medium text-gray-900">Bookkeeping Ledgers:</span> Addresses financial management challenges identified in your focus areas</p>
-                      <p><span className="font-medium text-gray-900">Operations:</span> Critical for achieving your expected implementation and improvement outcomes</p>
+                      <p><span className="font-medium text-gray-900">Bookkeeping Ledgers:</span> Critical for financial record-keeping and cash flow management</p>
+                      <p><span className="font-medium text-gray-900">Operations:</span> Core operational processes for producer organizations and supply chain management</p>
+                      <p><span className="font-medium text-gray-900">Business Relationships:</span> Building strong partnerships with customers, suppliers, and stakeholders</p>
+                      <p><span className="font-medium text-gray-900">Inventory Management:</span> Essential for reducing waste and optimizing product flow in retail operations</p>
+                      <p><span className="font-medium text-gray-900">Staff Management:</span> Key for building effective teams and improving business operations</p>
                     </div>
                   </div>
 
@@ -269,7 +255,10 @@ const SimplifiedALPPrototype = () => {
                             const isSelected = selectedCourses[categoryId];
                             const isRecommended = categoryId === 'understanding-cooperatives' || 
                                                 categoryId === 'bookkeeping-ledgers' || 
-                                                categoryId === 'operations';
+                                                categoryId === 'operations' ||
+                                                categoryId === 'business-relationships' ||
+                                                categoryId === 'inventory-management' ||
+                                                categoryId === 'staff-management';
                             
                             return (
                               <div 
@@ -311,15 +300,62 @@ const SimplifiedALPPrototype = () => {
                                       </span>
                                     </div>
                                     
-                                    <div className="flex flex-wrap gap-1">
-                                      {categoryData.courses.map((courseName, idx) => (
-                                        <span 
-                                          key={idx} 
-                                          className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
-                                        >
-                                          {courseName}
-                                        </span>
-                                      ))}
+                                    <div className="flex flex-wrap gap-1 mb-3">
+                                      {categoryData.courses.map((course, idx) => {
+                                        // Handle both string courses and course objects with lessons
+                                        const courseName = typeof course === 'string' ? course : course.name;
+                                        const lessons = typeof course === 'object' && course.lessons ? course.lessons : [];
+                                        const hasLessons = lessons.length > 0;
+                                        
+                                        // Create tooltip content for lessons
+                                        const tooltipContent = hasLessons 
+                                          ? `Lessons:\n${lessons.map((lesson, i) => `${i + 1}. ${lesson}`).join('\n')}`
+                                          : courseName;
+                                        
+                                        return (
+                                          <span 
+                                            key={idx} 
+                                            className="relative group px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition-colors cursor-help"
+                                            title={tooltipContent}
+                                          >
+                                            {courseName}
+                                            
+                                            {/* Custom tooltip for lessons */}
+                                            {hasLessons && (
+                                              <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 max-w-sm">
+                                                <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg">
+                                                  <div className="font-medium mb-2">{courseName}</div>
+                                                  <div className="text-gray-300 text-xs space-y-1">
+                                                    {lessons.map((lesson, lessonIdx) => (
+                                                      <div key={lessonIdx} className="flex items-start">
+                                                        <span className="mr-2 text-gray-400">{lessonIdx + 1}.</span>
+                                                        <span>{lesson}</span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                  {/* Arrow */}
+                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                                                    <div className="border-4 border-transparent border-t-gray-900"></div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            )}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                    
+                                    <div className="flex justify-end">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          viewMaterials(categoryName);
+                                        }}
+                                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                      >
+                                        <FolderOpen className="w-3 h-3 mr-1" />
+                                        View Materials
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -362,7 +398,10 @@ const SimplifiedALPPrototype = () => {
                         setSelectedCourses({
                           'understanding-cooperatives': true,
                           'bookkeeping-ledgers': true,
-                          'operations': true
+                          'operations': true,
+                          'business-relationships': true,
+                          'inventory-management': true,
+                          'staff-management': true
                         });
                       }}
                       className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
