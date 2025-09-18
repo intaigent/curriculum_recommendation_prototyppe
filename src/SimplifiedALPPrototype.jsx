@@ -318,7 +318,7 @@ const SimplifiedALPPrototype = () => {
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              ALP Curriculum Recommendation System
+              ALP Curriculum Recommendation Assistant
             </h1>
           </div>
           <p className="text-gray-600 text-base mb-2">
