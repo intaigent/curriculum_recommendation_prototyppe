@@ -36,25 +36,45 @@ const SimplifiedALPPrototype = () => {
       alert('Please fill in all required fields: Project Focus Areas, Target Stakeholder, Business Context & Constraints, and Expected Outcomes');
       return;
     }
-    
+
     setIsGenerating(true);
-    
+
     setTimeout(() => {
       setRecommendations({ confidence: 92 });
-      // Use categories from demo_output file - convert to IDs that match existing cards
-      setSelectedCourses({
-        'bookkeeping-and-your-business': true,
-        'bookkeeping-ledgers': true,
-        'business-relationships': true,
-        'inventory-management': true,
-        'cost-management': true,
-        'finance-and-accounting-basics': true,
-        'financial-analysis-and-planning': true,
-        'working-with-credit': true,
-        'planning-for-your-business': true,
-        'marketing': true,
-        'managing-risk': true
-      });
+      // AI recommendations - select specific courses within recommended categories
+      const recommendedSelections = {};
+
+      // Helper function to add course selections for a category
+      const addCourseSelections = (categoryName, courseIndices = []) => {
+        const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        Object.entries(learningPaths).forEach(([pathName, categories]) => {
+          Object.entries(categories).forEach(([catName, categoryData]) => {
+            if (catName === categoryName) {
+              categoryData.courses.forEach((course, index) => {
+                const courseId = `${categoryId}-course-${index}`;
+                if (courseIndices.length === 0 || courseIndices.includes(index)) {
+                  recommendedSelections[courseId] = true;
+                }
+              });
+            }
+          });
+        });
+      };
+
+      // Add AI recommended courses
+      addCourseSelections('Bookkeeping and Your Business', [0, 1]); // First 2 courses
+      addCourseSelections('Bookkeeping Ledgers', [0, 2]); // Cash Ledger + Expense Ledger
+      addCourseSelections('Business Relationships', [0, 1, 2]); // First 3 courses
+      addCourseSelections('Inventory Management', [0, 1, 3]); // Skip recordkeeping, include key courses
+      addCourseSelections('Cost Management'); // All courses
+      addCourseSelections('Finance and Accounting Basics', [0, 1, 2, 3]); // Skip cooperative-specific
+      addCourseSelections('Financial Analysis and Planning', [0, 3, 4]); // Key planning courses
+      addCourseSelections('Working with Credit', [0, 2]); // Introduction + customer credit
+      addCourseSelections('Planning For Your Business', [0, 1, 4]); // Core planning courses
+      addCourseSelections('Marketing', [0, 2, 3]); // Skip vision, focus on practical
+      addCourseSelections('Managing Risk', [0, 1]); // Core risk management
+
+      setSelectedCourses(recommendedSelections);
       setIsGenerating(false);
     }, 2000);
   };
@@ -63,7 +83,55 @@ const SimplifiedALPPrototype = () => {
     setSelectedCourses(prev => ({ ...prev, [courseId]: !prev[courseId] }));
   };
 
-  const exportToPDF = () => {
+  // Helper function to get course ID
+  const getCourseId = (categoryName, courseIndex) => {
+    const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    return `${categoryId}-course-${courseIndex}`;
+  };
+
+  // Helper function to get selected courses count for a category
+  const getCategorySelectedCount = (categoryName, categoryData) => {
+    let selectedCount = 0;
+    categoryData.courses.forEach((course, index) => {
+      const courseId = getCourseId(categoryName, index);
+      if (selectedCourses[courseId]) {
+        selectedCount++;
+      }
+    });
+    return selectedCount;
+  };
+
+  // Helper function to toggle all courses in a category
+  const toggleCategoryAll = (categoryName, categoryData) => {
+    const selectedCount = getCategorySelectedCount(categoryName, categoryData);
+    const shouldSelectAll = selectedCount < categoryData.courses.length;
+
+    const updates = {};
+    categoryData.courses.forEach((course, index) => {
+      const courseId = getCourseId(categoryName, index);
+      updates[courseId] = shouldSelectAll;
+    });
+
+    setSelectedCourses(prev => ({ ...prev, ...updates }));
+  };
+
+  // Helper function to get total selected courses count
+  const getTotalSelectedCount = () => {
+    return Object.values(selectedCourses).filter(Boolean).length;
+  };
+
+  // Helper function to get total courses count
+  const getTotalCoursesCount = () => {
+    let total = 0;
+    Object.values(learningPaths).forEach(categories => {
+      Object.values(categories).forEach(categoryData => {
+        total += categoryData.courses.length;
+      });
+    });
+    return total;
+  };
+
+  const exportToPDF = async () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const margin = 20;
@@ -88,16 +156,37 @@ const SimplifiedALPPrototype = () => {
       return currentY;
     };
 
-    // Enhanced Header with Logo Placeholder
+    // Enhanced Header with ALP Logo
     doc.setFillColor(59, 130, 246);
     doc.rect(0, 0, pageWidth, 35, 'F');
     doc.setTextColor(255, 255, 255);
 
-    // Logo placeholder area
-    doc.setFillColor(255, 255, 255, 0.2);
-    doc.rect(margin, 8, 25, 20, 'F');
-    doc.setFontSize(8);
-    doc.text('LOGO', margin + 8, 20);
+    // Add ALP Logo
+    try {
+      // Load the logo image
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        logoImg.onload = () => {
+          // Add logo to PDF with white background for better visibility
+          doc.setFillColor(255, 255, 255);
+          doc.rect(margin, 8, 25, 20, 'F');
+          doc.addImage(logoImg, 'JPEG', margin + 2, 10, 21, 16);
+          resolve();
+        };
+        logoImg.onerror = reject;
+        logoImg.src = '/images/alp_logo.jpeg';
+      });
+    } catch (error) {
+      // Fallback to ALP text if logo fails to load
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margin, 8, 25, 20, 'F');
+      doc.setFontSize(12);
+      doc.setTextColor(59, 130, 246);
+      doc.text('ALP', margin + 8, 20);
+      doc.setTextColor(255, 255, 255);
+    }
 
     // Title and metadata
     doc.setFontSize(16);
@@ -148,21 +237,32 @@ const SimplifiedALPPrototype = () => {
     yPosition = addText('TRAINING PLAN', margin, yPosition, pageWidth - 2 * margin, 14, 'bold');
     yPosition += 10;
 
-    // Filter only selected courses from real course data
+    // Filter only individually selected courses from real course data
     const selectedCoursesFromData = [];
     Object.entries(learningPaths).forEach(([pathName, categories]) => {
       const selectedCategories = [];
       Object.entries(categories).forEach(([categoryName, categoryData]) => {
-        const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        if (selectedCourses[categoryId]) {
+        const selectedCoursesInCategory = [];
+
+        // Check each course individually
+        categoryData.courses.forEach((course, courseIndex) => {
+          const courseId = getCourseId(categoryName, courseIndex);
+          if (selectedCourses[courseId]) {
+            const courseName = typeof course === 'string' ? course : course.name;
+            selectedCoursesInCategory.push(courseName);
+          }
+        });
+
+        // Only include category if it has selected courses
+        if (selectedCoursesInCategory.length > 0) {
           selectedCategories.push({
             name: categoryName,
-            courses: categoryData.courses.map(course =>
-              typeof course === 'string' ? course : course.name
-            )
+            courses: selectedCoursesInCategory
           });
         }
       });
+
+      // Only include learning path if it has categories with selected courses
       if (selectedCategories.length > 0) {
         selectedCoursesFromData.push({
           path: pathName,
@@ -193,22 +293,6 @@ const SimplifiedALPPrototype = () => {
     doc.save('ALP_Curriculum_Recommendation_Report_MockUp.pdf');
   };
 
-  const getRationaleBadge = (categoryId) => {
-    const rationales = {
-      'bookkeeping-and-your-business': { label: 'Foundation', color: 'bg-blue-100 text-blue-700' },
-      'bookkeeping-ledgers': { label: 'Foundation', color: 'bg-blue-100 text-blue-700' },
-      'finance-and-accounting-basics': { label: 'Foundation', color: 'bg-blue-100 text-blue-700' },
-      'inventory-management': { label: 'Operations', color: 'bg-green-100 text-green-700' },
-      'cost-management': { label: 'Operations', color: 'bg-green-100 text-green-700' },
-      'planning-for-your-business': { label: 'Operations', color: 'bg-green-100 text-green-700' },
-      'business-relationships': { label: 'Stakeholder', color: 'bg-orange-100 text-orange-700' },
-      'working-with-credit': { label: 'Stakeholder', color: 'bg-orange-100 text-orange-700' },
-      'marketing': { label: 'Stakeholder', color: 'bg-orange-100 text-orange-700' },
-      'financial-analysis-and-planning': { label: 'Strategic', color: 'bg-purple-100 text-purple-700' },
-      'managing-risk': { label: 'Strategic', color: 'bg-purple-100 text-purple-700' }
-    };
-    return rationales[categoryId] || null;
-  };
 
   const viewMaterials = (categoryName) => {
     // Convert category name to folder path format
@@ -238,7 +322,7 @@ const SimplifiedALPPrototype = () => {
             </h1>
           </div>
           <p className="text-gray-600 text-base mb-2">
-            Generate personalized learning pathways for agricultural development projects
+            Build customized training plans for your ALP projects
           </p>
           <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r">
             <h3 className="font-medium text-blue-900 text-sm mb-1">How to use this tool:</h3>
@@ -259,7 +343,7 @@ const SimplifiedALPPrototype = () => {
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Step 1 of 4</span>
               </div>
               <p className="text-sm text-gray-600 mb-6">
-                Provide information about your agricultural development project to receive targeted course recommendations.
+                Provide information about your project to receive customized course recommendations.
               </p>
 
               <div className="space-y-5">
@@ -429,7 +513,7 @@ const SimplifiedALPPrototype = () => {
                     <div className="flex items-center space-x-3">
                       <h3 className="text-sm font-medium text-gray-900">Course Selection</h3>
                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                        {Object.keys(selectedCourses).filter(id => selectedCourses[id]).length} of {Object.entries(learningPaths).reduce((total, [, categories]) => total + Object.keys(categories).length, 0)} selected
+                        {getTotalSelectedCount()} of {getTotalCoursesCount()} courses selected
                       </span>
                     </div>
                     <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Step 3 of 4</span>
@@ -439,118 +523,149 @@ const SimplifiedALPPrototype = () => {
                   </p>
                   <div className="overflow-y-auto flex-1 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
                     {Object.entries(learningPaths).map(([pathName, categories]) => (
-                      <div key={pathName}>
-                        <h4 className="text-sm font-medium text-gray-900 mb-3">{pathName}</h4>
+                      <div key={pathName} className="mb-6">
+                        {/* Enhanced Learning Path Header */}
+                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-r-md p-3 mb-4">
+                          <div className="flex items-center space-x-2">
+                            <BookOpen className="w-5 h-5 text-blue-600" />
+                            <h4 className="text-lg font-bold text-blue-900">{pathName}</h4>
+                          </div>
+                        </div>
                         <div className="space-y-2">
                           {Object.entries(categories).map(([categoryName, categoryData]) => {
                             const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                            const isSelected = selectedCourses[categoryId];
-                            const isRecommended = categoryId === 'bookkeeping-and-your-business' ||
-                                                categoryId === 'bookkeeping-ledgers' ||
-                                                categoryId === 'business-relationships' ||
-                                                categoryId === 'inventory-management' ||
-                                                categoryId === 'cost-management' ||
-                                                categoryId === 'finance-and-accounting-basics' ||
-                                                categoryId === 'financial-analysis-and-planning' ||
-                                                categoryId === 'working-with-credit' ||
-                                                categoryId === 'planning-for-your-business' ||
-                                                categoryId === 'marketing' ||
-                                                categoryId === 'managing-risk';
-
-                            const rationaleBadge = getRationaleBadge(categoryId);
+                            const selectedCount = getCategorySelectedCount(categoryName, categoryData);
+                            const totalCount = categoryData.courses.length;
+                            const allSelected = selectedCount === totalCount;
+                            const someSelected = selectedCount > 0;
 
                             return (
                               <div
                                 key={categoryName}
-                                className={`border rounded-md p-3 cursor-pointer transition-all hover:shadow-sm ${
-                                  isSelected
-                                    ? 'border-blue-300 bg-blue-50'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                                onClick={() => toggleCourse(categoryId)}
+                                className="border border-gray-200 rounded-md p-3 hover:shadow-sm transition-all"
                               >
-                                <div className="flex items-start space-x-3">
-                                  <div className="mt-0.5">
-                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                      isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
-                                    }`}>
-                                      {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>}
-                                    </div>
+                                {/* Category Header */}
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center space-x-3">
+                                    {/* Category Select All Checkbox */}
+                                    <button
+                                      onClick={() => toggleCategoryAll(categoryName, categoryData)}
+                                      className="flex items-center space-x-2 hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
+                                    >
+                                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                        allSelected
+                                          ? 'bg-blue-500 border-blue-500'
+                                          : someSelected
+                                          ? 'bg-blue-100 border-blue-400'
+                                          : 'border-gray-300'
+                                      }`}>
+                                        {allSelected && <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>}
+                                        {someSelected && !allSelected && <div className="w-1.5 h-1.5 bg-blue-500 rounded-sm"></div>}
+                                      </div>
+                                      <h5 className="text-sm font-medium text-gray-900">{categoryName}</h5>
+                                    </button>
+
+                                    {/* Badges */}
+                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                      {selectedCount}/{totalCount}
+                                    </span>
                                   </div>
 
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center space-x-2 flex-wrap">
-                                        <h5 className="text-sm font-medium text-gray-900">{categoryName}</h5>
-                                        {isRecommended && (
-                                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                                            <Sparkles className="w-3 h-3 mr-1" />
-                                            AI Pick
-                                          </span>
-                                        )}
-                                        {rationaleBadge && (
-                                          <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${rationaleBadge.color}`}>
-                                            {rationaleBadge.label}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          viewMaterials(categoryName);
-                                        }}
-                                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 transition-colors"
-                                      >
-                                        <FolderOpen className="w-3 h-3 mr-1" />
-                                        View Materials
-                                      </button>
-                                    </div>
+                                  <button
+                                    onClick={() => viewMaterials(categoryName)}
+                                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                  >
+                                    <FolderOpen className="w-3 h-3 mr-1" />
+                                    View Materials
+                                  </button>
+                                </div>
 
-                                    <div className="flex flex-wrap gap-1">
-                                      {categoryData.courses.map((course, idx) => {
-                                        // Handle both string courses and course objects with lessons
-                                        const courseName = typeof course === 'string' ? course : course.name;
-                                        const lessons = typeof course === 'object' && course.lessons ? course.lessons : [];
-                                        const hasLessons = lessons.length > 0;
+                                {/* Individual Courses */}
+                                <div className="space-y-2">
+                                  {categoryData.courses.map((course, courseIndex) => {
+                                    const courseName = typeof course === 'string' ? course : course.name;
+                                    const lessons = typeof course === 'object' && course.lessons ? course.lessons : [];
+                                    const hasLessons = lessons.length > 0;
+                                    const courseId = getCourseId(categoryName, courseIndex);
+                                    const isCourseSelected = selectedCourses[courseId];
 
-                                        // Create tooltip content for lessons
-                                        const tooltipContent = hasLessons
-                                          ? `Lessons:\n${lessons.map((lesson, i) => `${i + 1}. ${lesson}`).join('\n')}`
-                                          : courseName;
+                                    // Check if this specific course is AI recommended
+                                    const isRecommended = isCourseSelected && (
+                                      (categoryName === 'Bookkeeping and Your Business' && courseIndex < 2) ||
+                                      (categoryName === 'Bookkeeping Ledgers' && [0, 2].includes(courseIndex)) ||
+                                      (categoryName === 'Business Relationships' && courseIndex < 3) ||
+                                      (categoryName === 'Inventory Management' && [0, 1, 3].includes(courseIndex)) ||
+                                      (categoryName === 'Cost Management') ||
+                                      (categoryName === 'Finance and Accounting Basics' && courseIndex < 4) ||
+                                      (categoryName === 'Financial Analysis and Planning' && [0, 3, 4].includes(courseIndex)) ||
+                                      (categoryName === 'Working with Credit' && [0, 2].includes(courseIndex)) ||
+                                      (categoryName === 'Planning For Your Business' && [0, 1, 4].includes(courseIndex)) ||
+                                      (categoryName === 'Marketing' && [0, 2, 3].includes(courseIndex)) ||
+                                      (categoryName === 'Managing Risk' && courseIndex < 2)
+                                    );
 
-                                        return (
-                                          <span
-                                            key={idx}
-                                            className="relative group px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition-colors cursor-help"
-                                            title={tooltipContent}
-                                          >
-                                            {courseName}
+                                    return (
+                                      <div key={courseIndex} className="flex items-start space-x-3 group ml-6">
+                                        {/* Course Checkbox */}
+                                        <button
+                                          onClick={() => toggleCourse(courseId)}
+                                          className="mt-0.5 flex-shrink-0"
+                                        >
+                                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                                            isCourseSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300 hover:border-gray-400'
+                                          }`}>
+                                            {isCourseSelected && <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>}
+                                          </div>
+                                        </button>
 
-                                            {/* Custom tooltip for lessons */}
-                                            {hasLessons && (
-                                              <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 max-w-sm">
+                                        {/* Course Content */}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center space-x-2 mb-1">
+                                            <span
+                                              className={`text-sm cursor-pointer transition-colors ${
+                                                isCourseSelected ? 'text-gray-700 font-normal' : 'text-gray-600 hover:text-gray-700'
+                                              }`}
+                                              onClick={() => toggleCourse(courseId)}
+                                            >
+                                              {courseName}
+                                            </span>
+                                            {isRecommended && (
+                                              <span className="inline-flex items-center px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                                                <Sparkles className="w-2.5 h-2.5 mr-1" />
+                                                AI Pick
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {/* Lessons Preview (only if selected and has lessons) */}
+                                          {isCourseSelected && hasLessons && (
+                                            <div className="relative group">
+                                              <div className="text-xs text-gray-500 cursor-help">
+                                                {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} • Hover for details
+                                              </div>
+
+                                              {/* Tooltip for lessons */}
+                                              <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 top-full left-0 mt-1 w-80 max-w-sm">
                                                 <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg">
-                                                  <div className="font-medium mb-2">{courseName}</div>
-                                                  <div className="text-gray-300 text-xs space-y-1">
+                                                  <div className="font-medium mb-2">{courseName} - Lessons</div>
+                                                  <div className="text-gray-300 text-xs space-y-1 max-h-32 overflow-y-auto">
                                                     {lessons.map((lesson, lessonIdx) => (
                                                       <div key={lessonIdx} className="flex items-start">
-                                                        <span className="mr-2 text-gray-400">{lessonIdx + 1}.</span>
+                                                        <span className="mr-2 text-gray-400 flex-shrink-0">{lessonIdx + 1}.</span>
                                                         <span>{lesson}</span>
                                                       </div>
                                                     ))}
                                                   </div>
                                                   {/* Arrow */}
-                                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                                                    <div className="border-4 border-transparent border-t-gray-900"></div>
-                                                  </div>
+                                                  <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 rotate-45"></div>
                                                 </div>
                                               </div>
-                                            )}
-                                          </span>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             );
@@ -662,7 +777,7 @@ const SimplifiedALPPrototype = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={exportToPDF}
-                      disabled={Object.keys(selectedCourses).filter(id => selectedCourses[id]).length === 0}
+                      disabled={getTotalSelectedCount() === 0}
                       className="flex-1 py-2 px-4 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                     >
                       <Download className="w-4 h-4 mr-2" />
@@ -671,19 +786,40 @@ const SimplifiedALPPrototype = () => {
 
                     <button
                       onClick={() => {
-                        setSelectedCourses({
-                          'bookkeeping-and-your-business': true,
-                          'bookkeeping-ledgers': true,
-                          'business-relationships': true,
-                          'inventory-management': true,
-                          'cost-management': true,
-                          'finance-and-accounting-basics': true,
-                          'financial-analysis-and-planning': true,
-                          'working-with-credit': true,
-                          'planning-for-your-business': true,
-                          'marketing': true,
-                          'managing-risk': true
-                        });
+                        // Reset to AI recommended individual courses
+                        const recommendedSelections = {};
+
+                        // Helper function to add course selections for a category
+                        const addCourseSelections = (categoryName, courseIndices = []) => {
+                          const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                          Object.entries(learningPaths).forEach(([pathName, categories]) => {
+                            Object.entries(categories).forEach(([catName, categoryData]) => {
+                              if (catName === categoryName) {
+                                categoryData.courses.forEach((course, index) => {
+                                  const courseId = `${categoryId}-course-${index}`;
+                                  if (courseIndices.length === 0 || courseIndices.includes(index)) {
+                                    recommendedSelections[courseId] = true;
+                                  }
+                                });
+                              }
+                            });
+                          });
+                        };
+
+                        // Add AI recommended courses (same as in generateRecommendations)
+                        addCourseSelections('Bookkeeping and Your Business', [0, 1]);
+                        addCourseSelections('Bookkeeping Ledgers', [0, 2]);
+                        addCourseSelections('Business Relationships', [0, 1, 2]);
+                        addCourseSelections('Inventory Management', [0, 1, 3]);
+                        addCourseSelections('Cost Management');
+                        addCourseSelections('Finance and Accounting Basics', [0, 1, 2, 3]);
+                        addCourseSelections('Financial Analysis and Planning', [0, 3, 4]);
+                        addCourseSelections('Working with Credit', [0, 2]);
+                        addCourseSelections('Planning For Your Business', [0, 1, 4]);
+                        addCourseSelections('Marketing', [0, 2, 3]);
+                        addCourseSelections('Managing Risk', [0, 1]);
+
+                        setSelectedCourses(recommendedSelections);
                       }}
                       className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
                       title="Reset to original AI recommendations"
@@ -692,7 +828,7 @@ const SimplifiedALPPrototype = () => {
                     </button>
                   </div>
 
-                  {Object.keys(selectedCourses).filter(id => selectedCourses[id]).length === 0 && (
+                  {getTotalSelectedCount() === 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
                       <p className="text-xs text-amber-800">
                         <strong>Note:</strong> Select at least one course to enable PDF export.
