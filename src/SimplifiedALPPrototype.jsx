@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Upload, Users, Download, AlertCircle, BookOpen, Sparkles, ChevronRight, FolderOpen } from 'lucide-react';
+import { Upload, Users, Download, AlertCircle, BookOpen, Sparkles, ChevronRight, FolderOpen, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { learningPaths } from './data/courseData';
+import jsPDF from 'jspdf';
 
 const SimplifiedALPPrototype = () => {
   const [projectData, setProjectData] = useState({
@@ -14,6 +15,8 @@ const SimplifiedALPPrototype = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [recommendations, setRecommendations] = useState(null);
   const [selectedCourses, setSelectedCourses] = useState({});
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showAdditionalTraining, setShowAdditionalTraining] = useState(true);
 
   // Learning paths are now imported from courseData.js
 
@@ -38,13 +41,19 @@ const SimplifiedALPPrototype = () => {
     
     setTimeout(() => {
       setRecommendations({ confidence: 92 });
+      // Use categories from demo_output file - convert to IDs that match existing cards
       setSelectedCourses({
-        'understanding-cooperatives': true,
+        'bookkeeping-and-your-business': true,
         'bookkeeping-ledgers': true,
-        'operations': true,
         'business-relationships': true,
         'inventory-management': true,
-        'staff-management': true
+        'cost-management': true,
+        'finance-and-accounting-basics': true,
+        'financial-analysis-and-planning': true,
+        'working-with-credit': true,
+        'planning-for-your-business': true,
+        'marketing': true,
+        'managing-risk': true
       });
       setIsGenerating(false);
     }, 2000);
@@ -55,60 +64,218 @@ const SimplifiedALPPrototype = () => {
   };
 
   const exportToPDF = () => {
-    alert('PDF export functionality - would generate learning path report');
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 20;
+    const lineHeight = 7;
+    let yPosition = margin;
+
+    // Helper function to add text with word wrapping
+    const addText = (text, x, y, maxWidth, fontSize = 12, style = 'normal') => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', style);
+      const lines = doc.splitTextToSize(text, maxWidth);
+      doc.text(lines, x, y);
+      return y + (lines.length * lineHeight);
+    };
+
+    // Helper function to check page overflow and add new page if needed
+    const checkPageOverflow = (currentY, requiredSpace = 20) => {
+      if (currentY + requiredSpace > doc.internal.pageSize.height - 20) {
+        doc.addPage();
+        return margin;
+      }
+      return currentY;
+    };
+
+    // Enhanced Header with Logo Placeholder
+    doc.setFillColor(59, 130, 246);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+
+    // Logo placeholder area
+    doc.setFillColor(255, 255, 255, 0.2);
+    doc.rect(margin, 8, 25, 20, 'F');
+    doc.setFontSize(8);
+    doc.text('LOGO', margin + 8, 20);
+
+    // Title and metadata
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ALP Curriculum Recommendation Report', margin + 35, 20);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const currentDate = new Date().toLocaleDateString();
+    doc.text(`Project Ref: ALP-TZ-2024-001  |  Generated: ${currentDate}`, margin + 35, 28);
+
+    doc.setTextColor(0, 0, 0);
+    yPosition = 45;
+
+    // Executive Summary
+    yPosition = addText('EXECUTIVE SUMMARY', margin, yPosition, pageWidth - 2 * margin, 14, 'bold');
+    yPosition += 5;
+    yPosition = addText('This comprehensive training curriculum has been designed specifically for agribusiness retailers in Tanzania to enhance their operational capacity, financial management, and stakeholder relationships. The program addresses critical skill gaps identified through needs assessment and aligns with local market conditions and regulatory requirements.', margin, yPosition, pageWidth - 2 * margin, 10);
+    yPosition += 10;
+
+    // Project Details Section with Enhanced Content
+    yPosition = checkPageOverflow(yPosition, 30);
+    yPosition = addText('PROJECT DETAILS', margin, yPosition, pageWidth - 2 * margin, 14, 'bold');
+    yPosition += 5;
+
+    yPosition = addText('Project Focus Areas:', margin, yPosition, pageWidth - 2 * margin, 12, 'bold');
+    yPosition = addText('Comprehensive capacity building program for agribusiness retailers in Tanzania focusing on inventory management excellence, financial systems implementation, and supply chain optimization. The program emphasizes practical skills development for agricultural input management, stakeholder relationship building, and sustainable business growth strategies tailored to Tanzania\'s rural and semi-urban markets.', margin + 10, yPosition, pageWidth - 2 * margin - 10, 10);
+    yPosition += 8;
+
+    yPosition = addText('Target Stakeholder:', margin, yPosition, pageWidth - 2 * margin, 12, 'bold');
+    yPosition = addText('Agribusiness Retailers - Small to medium-scale agricultural input dealers serving rural farming communities across Tanzania, including cooperative leaders and individual entrepreneurs managing agricultural supply stores.', margin + 10, yPosition, pageWidth - 2 * margin - 10, 10);
+    yPosition += 8;
+
+    yPosition = addText('Business Context & Constraints:', margin, yPosition, pageWidth - 2 * margin, 12, 'bold');
+    yPosition = addText('Operating environment: Rural and semi-urban Tanzania with mixed literacy levels (40% primary education only), limited digital infrastructure (intermittent internet connectivity), seasonal business cycles tied to agricultural calendars. Participants serve smallholder farmers requiring agricultural inputs, tools, and supplies. Training delivery must accommodate Swahili language preferences and employ practical, hands-on learning methodologies suitable for adult learners with varied educational backgrounds.', margin + 10, yPosition, pageWidth - 2 * margin - 10, 10);
+    yPosition += 12;
+
+    yPosition = addText('Expected Outcomes:', margin, yPosition, pageWidth - 2 * margin, 12, 'bold');
+    yPosition = addText('• Achieve 25% reduction in inventory losses through improved stock management systems\n• Enhance financial record-keeping accuracy by 80% with systematic bookkeeping practices\n• Strengthen supplier negotiation capabilities resulting in 15% cost savings\n• Improve farmer credit management reducing default rates by 30%\n• Establish sustainable business practices ensuring 20% profit margin improvement\n• Build digital payment system adoption reaching 60% of transactions', margin + 10, yPosition, pageWidth - 2 * margin - 10, 10);
+    yPosition += 15;
+
+    yPosition = addText('Project Duration & Budget:', margin, yPosition, pageWidth - 2 * margin, 12, 'bold');
+    yPosition = addText('Duration: 6-month intensive program with 3-month follow-up support\nEstimated Budget: $45,000 USD (including materials, facilitator costs, and logistics)\nParticipants: 120 agribusiness retailers across 8 regions', margin + 10, yPosition, pageWidth - 2 * margin - 10, 10);
+    yPosition += 15;
+
+    // Selected Courses Section with Real Course Data
+    yPosition = checkPageOverflow(yPosition, 30);
+    yPosition = addText('TRAINING PLAN', margin, yPosition, pageWidth - 2 * margin, 14, 'bold');
+    yPosition += 10;
+
+    // Filter only selected courses from real course data
+    const selectedCoursesFromData = [];
+    Object.entries(learningPaths).forEach(([pathName, categories]) => {
+      const selectedCategories = [];
+      Object.entries(categories).forEach(([categoryName, categoryData]) => {
+        const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        if (selectedCourses[categoryId]) {
+          selectedCategories.push({
+            name: categoryName,
+            courses: categoryData.courses.map(course =>
+              typeof course === 'string' ? course : course.name
+            )
+          });
+        }
+      });
+      if (selectedCategories.length > 0) {
+        selectedCoursesFromData.push({
+          path: pathName,
+          categories: selectedCategories
+        });
+      }
+    });
+
+    selectedCoursesFromData.forEach((pathGroup, pathIndex) => {
+      yPosition = checkPageOverflow(yPosition, 25);
+      yPosition = addText(`${pathIndex + 1}. ${pathGroup.path}`, margin, yPosition, pageWidth - 2 * margin, 11, 'bold');
+
+      pathGroup.categories.forEach(category => {
+        yPosition = checkPageOverflow(yPosition, 15);
+        yPosition = addText(`   - ${category.name}`, margin + 5, yPosition, pageWidth - 2 * margin - 5, 10, 'bold');
+
+        category.courses.forEach(course => {
+          yPosition = checkPageOverflow(yPosition, 10);
+          yPosition = addText(`     • ${course}`, margin + 10, yPosition, pageWidth - 2 * margin - 10, 9);
+        });
+      });
+      yPosition += 5;
+    });
+
+
+
+    // Save the PDF
+    doc.save('ALP_Curriculum_Recommendation_Report_MockUp.pdf');
+  };
+
+  const getRationaleBadge = (categoryId) => {
+    const rationales = {
+      'bookkeeping-and-your-business': { label: 'Foundation', color: 'bg-blue-100 text-blue-700' },
+      'bookkeeping-ledgers': { label: 'Foundation', color: 'bg-blue-100 text-blue-700' },
+      'finance-and-accounting-basics': { label: 'Foundation', color: 'bg-blue-100 text-blue-700' },
+      'inventory-management': { label: 'Operations', color: 'bg-green-100 text-green-700' },
+      'cost-management': { label: 'Operations', color: 'bg-green-100 text-green-700' },
+      'planning-for-your-business': { label: 'Operations', color: 'bg-green-100 text-green-700' },
+      'business-relationships': { label: 'Stakeholder', color: 'bg-orange-100 text-orange-700' },
+      'working-with-credit': { label: 'Stakeholder', color: 'bg-orange-100 text-orange-700' },
+      'marketing': { label: 'Stakeholder', color: 'bg-orange-100 text-orange-700' },
+      'financial-analysis-and-planning': { label: 'Strategic', color: 'bg-purple-100 text-purple-700' },
+      'managing-risk': { label: 'Strategic', color: 'bg-purple-100 text-purple-700' }
+    };
+    return rationales[categoryId] || null;
   };
 
   const viewMaterials = (categoryName) => {
     // Convert category name to folder path format
     const folderName = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const materialsPath = `./materials/${folderName}/`;
-    
+
     // In a real implementation, this would open the folder or navigate to materials
     // For prototype purposes, show what would happen
     alert(`Opening materials folder: ${materialsPath}\n\nContents would include:\n- Course slides and presentations\n- Reading materials and handouts\n- Assessment materials\n- Video resources\n- Interactive exercises\n\nFor: ${categoryName}`);
-    
+
     // In production, you might use:
     // window.open(materialsPath, '_blank'); // For web links
     // or navigate to a materials management system
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Notion-style Header */}
       <div className="border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-6 py-8">
-          <div className="flex items-center space-x-3 mb-2">
+          <div className="flex items-center space-x-3 mb-3">
             <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              ALP Curriculum Recommendation
+              ALP Curriculum Recommendation System
             </h1>
           </div>
-          <p className="text-gray-600 text-base">
-            Generate personalized course recommendations based on your project objectives
+          <p className="text-gray-600 text-base mb-2">
+            Generate personalized learning pathways for agricultural development projects
           </p>
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r">
+            <h3 className="font-medium text-blue-900 text-sm mb-1">How to use this tool:</h3>
+            <p className="text-blue-800 text-sm">
+              1. Fill in your project details below → 2. Click "Generate Recommendations" → 3. Review and select courses → 4. Export your customized training plan
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-5 gap-8">
+      <div className="max-w-7xl mx-auto px-8 lg:px-12 py-8">
+        <div className="grid lg:grid-cols-7 gap-8">
           {/* Notion-style Input Section */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-3 space-y-6 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Project Details</h2>
-              
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Project Details</h2>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Step 1 of 4</span>
+              </div>
+              <p className="text-sm text-gray-600 mb-6">
+                Provide information about your agricultural development project to receive targeted course recommendations.
+              </p>
+
               <div className="space-y-5">
                 {/* Project Focus Areas */}
                 <div>
                   <label className="text-sm text-gray-700 font-medium mb-2 block">
                     Project Focus Areas <span className="text-red-500">*</span>
                   </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Describe what specific skills or knowledge gaps your project aims to address. Be specific about the training objectives and desired capabilities.
+                  </p>
                   <textarea
                     value={projectData.focusAreas}
                     onChange={(e) => handleInputChange('focusAreas', e.target.value)}
-                    placeholder="Improve inventory management and supplier relationships for agricultural inputs. Strengthen financial record-keeping for better cash flow planning."
-                    rows={3}
+                    placeholder="Example: Train agribusiness retailers in Tanzania to improve inventory management capacity for agricultural inputs and supplies. Strengthen finance and bookkeeping skills for better business operations and cash flow management."
+                    rows={4}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 resize-none"
                   />
                 </div>
@@ -118,15 +285,18 @@ const SimplifiedALPPrototype = () => {
                   <label className="text-sm text-gray-700 font-medium mb-2 block">
                     Target Stakeholder <span className="text-red-500">*</span>
                   </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Choose the primary group that will receive the training. This helps tailor the curriculum to their specific needs and context.
+                  </p>
                   <select
                     value={projectData.targetStakeholder}
                     onChange={(e) => handleInputChange('targetStakeholder', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 bg-white"
                   >
                     <option value="">Select stakeholder type...</option>
-                    <option value="producer_organizations">Producer Organizations</option>
-                    <option value="individual_farmers">Individual Farmers</option>
-                    <option value="enterprises_retailer">Enterprises/Retailer</option>
+                    <option value="producer_organizations">Producer Organizations (Cooperatives, Farmer Groups)</option>
+                    <option value="individual_farmers">Individual Farmers (Smallholder, Commercial)</option>
+                    <option value="agribusiness_retailers">Agribusiness Retailers (Input Dealers, Supply Stores)</option>
                   </select>
                 </div>
 
@@ -135,11 +305,14 @@ const SimplifiedALPPrototype = () => {
                   <label className="text-sm text-gray-700 font-medium mb-2 block">
                     Business Context & Constraints <span className="text-red-500">*</span>
                   </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Describe the operating environment, literacy levels, infrastructure, language preferences, and any training delivery constraints or requirements.
+                  </p>
                   <textarea
                     value={projectData.businessContext}
                     onChange={(e) => handleInputChange('businessContext', e.target.value)}
-                    placeholder="Rural agricultural supply store in Northern Tanzania. Limited internet access, seasonal cash constraints, serving 200+ smallholder farmers. 3-month training window before planting season."
-                    rows={3}
+                    placeholder="Example: Agribusiness retailers operating in rural and semi-urban Tanzania. Mixed literacy levels, limited digital infrastructure, seasonal business cycles. Serving smallholder farmers with agricultural inputs, tools, and supplies. Training must accommodate local languages and practical, hands-on learning approaches."
+                    rows={4}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 resize-none"
                   />
                 </div>
@@ -149,11 +322,14 @@ const SimplifiedALPPrototype = () => {
                   <label className="text-sm text-gray-700 font-medium mb-2 block">
                     Expected Outcomes <span className="text-red-500">*</span>
                   </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    List specific, measurable outcomes you want to achieve. Include concrete metrics, percentages, or targets where possible.
+                  </p>
                   <textarea
                     value={projectData.expectedOutcomes}
                     onChange={(e) => handleInputChange('expectedOutcomes', e.target.value)}
-                    placeholder="Reduce inventory waste by 30%. Improve farmer payment terms and supplier negotiations. Better business planning and seasonal cash management skills."
-                    rows={3}
+                    placeholder="Example: Improve inventory turnover and reduce stock losses by 25%. Enhance financial record-keeping and cash flow management. Strengthen supplier negotiation and farmer credit management capabilities. Build sustainable business practices for long-term profitability."
+                    rows={4}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 resize-none"
                   />
                 </div>
@@ -163,6 +339,9 @@ const SimplifiedALPPrototype = () => {
                   <label className="text-sm text-gray-700 font-medium mb-2 block">
                     ALP Metrics Report <span className="text-gray-400">(Optional)</span>
                   </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Upload existing assessment or baseline data to help refine recommendations. Supports PDF format only.
+                  </p>
                   <div className="relative border border-dashed border-gray-300 rounded-md p-6 text-center hover:border-gray-400 transition-colors group">
                     <Upload className="mx-auto h-6 w-6 text-gray-400 group-hover:text-gray-500 mb-2" />
                     <input
@@ -204,68 +383,88 @@ const SimplifiedALPPrototype = () => {
             </div>
           </div>
 
-          {/* Notion-style Results Section */}
-          <div className="lg:col-span-3">
-            <div className="sticky top-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Recommendations</h2>
-
+          {/* Recommendations and Course Selection Section */}
+          <div className="lg:col-span-4 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">Course Recommendations</h2>
               {!recommendations && !isGenerating && (
-                <div className="text-center py-16 px-6">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <AlertCircle className="h-6 w-6 text-gray-400" />
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-1">Ready to analyze</h3>
-                  <p className="text-sm text-gray-500">Complete the form to receive personalized course recommendations</p>
-                </div>
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">Step 2 of 4</span>
               )}
+            </div>
 
-              {isGenerating && (
-                <div className="text-center py-16 px-6">
-                  <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-500"></div>
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-1">Analyzing project</h3>
-                  <p className="text-sm text-gray-500">Processing your requirements to suggest optimal learning paths</p>
+            {!recommendations && !isGenerating && (
+              <div className="text-center py-16 px-6">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="h-6 w-6 text-gray-400" />
                 </div>
-              )}
+                <h3 className="text-sm font-medium text-gray-900 mb-1">Ready to generate recommendations</h3>
+                <p className="text-sm text-gray-500 mb-3">Complete all required fields in the Project Details form and click "Generate Recommendations"</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-left">
+                  <h4 className="text-xs font-medium text-blue-900 mb-1">What happens next:</h4>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>• AI analyzes your project context and requirements</li>
+                    <li>• Personalized course selection appears here</li>
+                    <li>• Review and customize your learning pathway</li>
+                    <li>• Export a comprehensive training plan</li>
+                  </ul>
+                </div>
+              </div>
+            )}
 
-              {recommendations && (
-                <div className="space-y-6">
-                  {/* Explanation */}
-                  <div className="border border-gray-200 rounded-md p-4">
-                    <h3 className="text-sm font-medium text-gray-900 mb-3">Recommendation rationale</h3>
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <p><span className="font-medium text-gray-900">Understanding Cooperatives:</span> Essential foundation for stakeholder governance and organizational structures</p>
-                      <p><span className="font-medium text-gray-900">Bookkeeping Ledgers:</span> Critical for financial record-keeping and cash flow management</p>
-                      <p><span className="font-medium text-gray-900">Operations:</span> Core operational processes for producer organizations and supply chain management</p>
-                      <p><span className="font-medium text-gray-900">Business Relationships:</span> Building strong partnerships with customers, suppliers, and stakeholders</p>
-                      <p><span className="font-medium text-gray-900">Inventory Management:</span> Essential for reducing waste and optimizing product flow in retail operations</p>
-                      <p><span className="font-medium text-gray-900">Staff Management:</span> Key for building effective teams and improving business operations</p>
+            {isGenerating && (
+              <div className="text-center py-16 px-6">
+                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-200 border-t-blue-500"></div>
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">Analyzing project</h3>
+                <p className="text-sm text-gray-500">Processing your requirements to suggest optimal learning paths</p>
+              </div>
+            )}
+
+            {recommendations && (
+              <div className="space-y-6">
+                {/* Course Selection - Now at the top */}
+                <div className="border border-gray-200 rounded-md p-4 flex flex-col h-[36rem] md:h-[40rem] lg:h-[48rem] relative">
+                  <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                    <div className="flex items-center space-x-3">
+                      <h3 className="text-sm font-medium text-gray-900">Course Selection</h3>
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                        {Object.keys(selectedCourses).filter(id => selectedCourses[id]).length} of {Object.entries(learningPaths).reduce((total, [, categories]) => total + Object.keys(categories).length, 0)} selected
+                      </span>
                     </div>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Step 3 of 4</span>
                   </div>
-
-                  {/* Learning Paths */}
-                  <div className="space-y-4">
+                  <p className="text-xs text-gray-600 mb-3 flex-shrink-0">
+                    Review AI recommendations (marked with ✨) and select additional courses. Click course titles to see details or use "View Materials" to explore resources.
+                  </p>
+                  <div className="overflow-y-auto flex-1 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
                     {Object.entries(learningPaths).map(([pathName, categories]) => (
                       <div key={pathName}>
-                        <h3 className="text-sm font-medium text-gray-900 mb-3">{pathName}</h3>
+                        <h4 className="text-sm font-medium text-gray-900 mb-3">{pathName}</h4>
                         <div className="space-y-2">
                           {Object.entries(categories).map(([categoryName, categoryData]) => {
                             const categoryId = categoryName.toLowerCase().replace(/[^a-z0-9]/g, '-');
                             const isSelected = selectedCourses[categoryId];
-                            const isRecommended = categoryId === 'understanding-cooperatives' || 
-                                                categoryId === 'bookkeeping-ledgers' || 
-                                                categoryId === 'operations' ||
+                            const isRecommended = categoryId === 'bookkeeping-and-your-business' ||
+                                                categoryId === 'bookkeeping-ledgers' ||
                                                 categoryId === 'business-relationships' ||
                                                 categoryId === 'inventory-management' ||
-                                                categoryId === 'staff-management';
-                            
+                                                categoryId === 'cost-management' ||
+                                                categoryId === 'finance-and-accounting-basics' ||
+                                                categoryId === 'financial-analysis-and-planning' ||
+                                                categoryId === 'working-with-credit' ||
+                                                categoryId === 'planning-for-your-business' ||
+                                                categoryId === 'marketing' ||
+                                                categoryId === 'managing-risk';
+
+                            const rationaleBadge = getRationaleBadge(categoryId);
+
                             return (
-                              <div 
-                                key={categoryName} 
-                                className={`border rounded-md p-4 cursor-pointer transition-all hover:shadow-sm ${
-                                  isSelected 
-                                    ? 'border-blue-300 bg-blue-50' 
+                              <div
+                                key={categoryName}
+                                className={`border rounded-md p-3 cursor-pointer transition-all hover:shadow-sm ${
+                                  isSelected
+                                    ? 'border-blue-300 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300'
                                 }`}
                                 onClick={() => toggleCourse(categoryId)}
@@ -278,48 +477,55 @@ const SimplifiedALPPrototype = () => {
                                       {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>}
                                     </div>
                                   </div>
-                                  
+
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center space-x-2">
-                                        <h4 className="text-sm font-medium text-gray-900">{categoryName}</h4>
+                                      <div className="flex items-center space-x-2 flex-wrap">
+                                        <h5 className="text-sm font-medium text-gray-900">{categoryName}</h5>
                                         {isRecommended && (
                                           <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
                                             <Sparkles className="w-3 h-3 mr-1" />
                                             AI Pick
                                           </span>
                                         )}
+                                        {rationaleBadge && (
+                                          <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${rationaleBadge.color}`}>
+                                            {rationaleBadge.label}
+                                          </span>
+                                        )}
                                       </div>
-                                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          viewMaterials(categoryName);
+                                        }}
+                                        className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                      >
+                                        <FolderOpen className="w-3 h-3 mr-1" />
+                                        View Materials
+                                      </button>
                                     </div>
-                                    
-                                    <div className="flex items-center space-x-4 text-xs text-gray-500 mb-3">
-                                      <span className="flex items-center">
-                                        <Users className="w-3 h-3 mr-1" />
-                                        {categoryData.level}
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="flex flex-wrap gap-1 mb-3">
+
+                                    <div className="flex flex-wrap gap-1">
                                       {categoryData.courses.map((course, idx) => {
                                         // Handle both string courses and course objects with lessons
                                         const courseName = typeof course === 'string' ? course : course.name;
                                         const lessons = typeof course === 'object' && course.lessons ? course.lessons : [];
                                         const hasLessons = lessons.length > 0;
-                                        
+
                                         // Create tooltip content for lessons
-                                        const tooltipContent = hasLessons 
+                                        const tooltipContent = hasLessons
                                           ? `Lessons:\n${lessons.map((lesson, i) => `${i + 1}. ${lesson}`).join('\n')}`
                                           : courseName;
-                                        
+
                                         return (
-                                          <span 
-                                            key={idx} 
+                                          <span
+                                            key={idx}
                                             className="relative group px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition-colors cursor-help"
                                             title={tooltipContent}
                                           >
                                             {courseName}
-                                            
+
                                             {/* Custom tooltip for lessons */}
                                             {hasLessons && (
                                               <div className="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-200 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 max-w-sm">
@@ -344,19 +550,6 @@ const SimplifiedALPPrototype = () => {
                                         );
                                       })}
                                     </div>
-                                    
-                                    <div className="flex justify-end">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          viewMaterials(categoryName);
-                                        }}
-                                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-700 transition-colors"
-                                      >
-                                        <FolderOpen className="w-3 h-3 mr-1" />
-                                        View Materials
-                                      </button>
-                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -366,52 +559,149 @@ const SimplifiedALPPrototype = () => {
                       </div>
                     ))}
                   </div>
+                  {/* Subtle fade indicator for more content */}
+                  <div className="absolute bottom-4 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b-md"></div>
+                </div>
 
-                  {/* Additional Recommendations */}
-                  <div className="border border-orange-200 rounded-md p-4 bg-orange-50">
-                    <h3 className="text-sm font-medium text-orange-900 mb-3">Additional course development</h3>
-                    <div className="space-y-3 text-sm text-orange-800">
-                      <div>
-                        <h4 className="font-medium">Context-specific training modules</h4>
-                        <p className="text-xs mt-1">Specialized content addressing your specific focus areas and business constraints</p>
+                {/* Collapsible Training Analysis */}
+                <div className="border border-gray-200 rounded-md p-4">
+                  <button
+                    onClick={() => setShowAnalysis(!showAnalysis)}
+                    className="w-full flex items-center justify-between text-left hover:bg-gray-50 rounded p-2 -m-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Info className="w-4 h-4 text-gray-500" />
+                      <h3 className="text-sm font-medium text-gray-900">Why these courses?</h3>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Optional Details</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-500">
+                        {showAnalysis ? 'Hide' : 'Show'} analysis
+                      </span>
+                      {showAnalysis ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                    </div>
+                  </button>
+
+                  {showAnalysis && (
+                    <div className="mt-4 space-y-3 text-sm text-gray-600">
+                      <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r">
+                        <h4 className="font-semibold text-blue-900 mb-2">🏗️ Financial Foundation Building</h4>
+                        <p className="text-blue-800">Establishing robust financial management systems through <span className="font-medium">Bookkeeping and Your Business</span>, <span className="font-medium">Bookkeeping Ledgers</span>, and <span className="font-medium">Finance and Accounting Basics</span>. These foundational skills enable systematic record-keeping and financial literacy essential for sustainable agribusiness operations in Tanzania's rural markets.</p>
                       </div>
-                      <div>
-                        <h4 className="font-medium">Performance monitoring framework</h4>
-                        <p className="text-xs mt-1">Training on tracking implementation rates and measuring outcomes aligned with your expected results</p>
+
+                      <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded-r">
+                        <h4 className="font-semibold text-green-900 mb-2">📦 Operational Excellence</h4>
+                        <p className="text-green-800">Optimizing core business operations through <span className="font-medium">Inventory Management</span>, <span className="font-medium">Cost Management</span>, and <span className="font-medium">Planning For Your Business</span>. Addresses the critical need to reduce stock losses by 25% and improve turnover rates in seasonal agricultural input markets.</p>
+                      </div>
+
+                      <div className="bg-orange-50 border-l-4 border-orange-400 p-3 rounded-r">
+                        <h4 className="font-semibold text-orange-900 mb-2">🤝 Stakeholder Relationship Management</h4>
+                        <p className="text-orange-800">Strengthening partnerships through <span className="font-medium">Business Relationships</span>, <span className="font-medium">Working with Credit</span>, and <span className="font-medium">Marketing</span>. Critical for building trust with smallholder farmers and managing credit systems while expanding market reach in rural communities.</p>
+                      </div>
+
+                      <div className="bg-purple-50 border-l-4 border-purple-400 p-3 rounded-r">
+                        <h4 className="font-semibold text-purple-900 mb-2">📈 Strategic Growth & Risk Management</h4>
+                        <p className="text-purple-800">Advanced capabilities through <span className="font-medium">Financial Analysis and Planning</span> and <span className="font-medium">Managing Risk</span>. Enables data-driven decision making and proactive risk mitigation for weather, market volatility, and credit risks inherent in agricultural supply chains.</p>
+                      </div>
+
+                      <div className="bg-gray-50 border border-gray-200 p-3 rounded">
+                        <p className="text-gray-700 text-xs"><span className="font-medium">Training Approach:</span> Sequential skill building from foundational financial literacy to advanced strategic management, designed for mixed literacy levels with practical, hands-on methodologies suitable for Tanzania's rural business environment.</p>
                       </div>
                     </div>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Export */}
-                  <div className="flex space-x-2 pt-2">
+                {/* Additional Professional Training Recommendations */}
+                <div className="border border-orange-200 rounded-md p-4 bg-orange-50">
+                  <button
+                    onClick={() => setShowAdditionalTraining(!showAdditionalTraining)}
+                    className="w-full flex items-center justify-between text-left hover:bg-orange-100 rounded p-2 -m-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-sm font-medium text-orange-900">Additional professional training recommendations</h3>
+                      <span className="text-xs bg-orange-200 text-orange-800 px-2 py-1 rounded">4 Specialized Modules</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-orange-700">
+                        {showAdditionalTraining ? 'Hide' : 'Show'} modules
+                      </span>
+                      {showAdditionalTraining ? <ChevronUp className="w-4 h-4 text-orange-700" /> : <ChevronDown className="w-4 h-4 text-orange-700" />}
+                    </div>
+                  </button>
+
+                  {showAdditionalTraining && (
+                    <div className="mt-4 space-y-3 text-sm text-orange-800">
+                      <div>
+                        <h4 className="font-medium">Agricultural Input Quality Assessment & Storage</h4>
+                        <p className="text-xs mt-1">Evaluating seed viability, fertilizer composition, and pesticide efficacy. Proper storage techniques to prevent input degradation and maintain quality standards for smallholder farmers.</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Crop Cycle Advisory & Input Timing</h4>
+                        <p className="text-xs mt-1">Understanding local crop calendars and seasonal input requirements for Tanzania. Advising farmers on optimal timing for seed, fertilizer, and pesticide application based on crop varieties.</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Regulatory Compliance for Agricultural Chemicals</h4>
+                        <p className="text-xs mt-1">Understanding licensing requirements for selling pesticides and fertilizers in Tanzania. Safety protocols and record-keeping for restricted agricultural inputs.</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Mobile Money & Digital Payment Integration</h4>
+                        <p className="text-xs mt-1">Setting up M-Pesa, Tigo Pesa, and other Tanzania-specific digital payment platforms. Managing mixed cash/digital transactions with rural customers.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-900">Export Training Plan</h3>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Step 4 of 4</span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    Generate a comprehensive PDF report with your selected courses, training rationale, and implementation guidance.
+                  </p>
+                  <div className="flex space-x-2">
                     <button
                       onClick={exportToPDF}
                       disabled={Object.keys(selectedCourses).filter(id => selectedCourses[id]).length === 0}
                       className="flex-1 py-2 px-4 bg-gray-900 text-white text-sm font-medium rounded-md hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      Export
+                      Export PDF Report
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         setSelectedCourses({
-                          'understanding-cooperatives': true,
+                          'bookkeeping-and-your-business': true,
                           'bookkeeping-ledgers': true,
-                          'operations': true,
                           'business-relationships': true,
                           'inventory-management': true,
-                          'staff-management': true
+                          'cost-management': true,
+                          'finance-and-accounting-basics': true,
+                          'financial-analysis-and-planning': true,
+                          'working-with-credit': true,
+                          'planning-for-your-business': true,
+                          'marketing': true,
+                          'managing-risk': true
                         });
                       }}
                       className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
+                      title="Reset to original AI recommendations"
                     >
-                      Reset
+                      Reset to AI Picks
                     </button>
                   </div>
+
+                  {Object.keys(selectedCourses).filter(id => selectedCourses[id]).length === 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                      <p className="text-xs text-amber-800">
+                        <strong>Note:</strong> Select at least one course to enable PDF export.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
